@@ -30,18 +30,27 @@ let sequence = agc.get_contig_sequence("sample1", "chr1", 100, 200)?;
 
 ## Building
 
-This crate requires the AGC library to be installed. You can either:
+This crate includes AGC as a git submodule and will build it automatically. Just run:
 
-1. Install AGC system-wide:
 ```bash
-git clone --recurse-submodules https://github.com/refresh-bio/agc
-cd agc && make && sudo make install
+cargo build
 ```
 
-2. Or set the `AGC_DIR` environment variable to point to the AGC source directory:
-```bash
-export AGC_DIR=/path/to/agc
-```
+The build process will:
+1. Initialize the AGC submodule if needed
+2. Build the AGC library if not already built
+3. Link against the built library
+
+### Alternative build methods
+
+If you have AGC installed elsewhere, you can:
+
+1. Use a system-wide installation (if installed to `/usr/local`)
+2. Set the `AGC_DIR` environment variable:
+   ```bash
+   export AGC_DIR=/path/to/agc
+   cargo build
+   ```
 
 ## Requirements
 

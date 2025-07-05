@@ -1,5 +1,6 @@
 use std::env;
 use std::path::PathBuf;
+use std::process::Command;
 
 fn main() {
     let _out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
@@ -12,7 +13,33 @@ fn main() {
         PathBuf::from("/usr/local")
     } else {
         // Fallback to git submodule
-        PathBuf::from("agc")
+        let submodule_path = PathBuf::from("agc");
+        
+        // Check if libagc.a exists, if not, try to build it
+        if !submodule_path.join("bin/libagc.a").exists() {
+            println!("cargo:warning=Building AGC library...");
+            
+            // Initialize submodule if needed
+            if !submodule_path.join("Makefile").exists() {
+                Command::new("git")
+                    .args(&["submodule", "update", "--init", "--recursive"])
+                    .status()
+                    .expect("Failed to initialize git submodules");
+            }
+            
+            // Build AGC
+            let status = Command::new("make")
+                .current_dir(&submodule_path)
+                .args(&["-j"])
+                .status()
+                .expect("Failed to build AGC");
+                
+            if !status.success() {
+                panic!("Failed to build AGC library");
+            }
+        }
+        
+        submodule_path
     };
     
     // Build the C++ bridge code
