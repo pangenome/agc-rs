@@ -1,0 +1,40 @@
+all: raduls
+	
+BIN_DIR = bin
+MAIN_DIR = Example
+RADULS_DIR=Raduls
+
+ifdef MSVC     # Avoid the MingW/Cygwin sections
+    uname_S := Windows
+	uname_M := "x86_64"
+else                          # If uname not available => 'not'
+    uname_S := $(shell sh -c 'uname -s 2>/dev/null || echo not')
+	uname_M := $(shell sh -c 'uname -m 2>/dev/null || echo not')
+endif
+
+CC 	= g++
+CFLAGS	= -DNDEBUG -I$(RADULS_DIR) -fopenmp -Wall -static -O3 -fno-ipa-ra -fno-tree-vrp -fno-tree-pre -m64 -std=c++17 -Wl,--whole-archive -lpthread -Wl,--no-whole-archive
+#CFLAGS	= -I$(RADULS_DIR) -fopenmp -Wall -static -O3 -fno-ipa-ra -fno-tree-vrp -fno-tree-pre -m64 -std=c++17 -Wl,--whole-archive -lpthread -Wl,--no-whole-archive
+CLINK	= -lm -fopenmp -static -O3 -fno-ipa-ra -fno-tree-vrp -fno-tree-pre  -std=c++17 -Wl,--whole-archive -lpthread -Wl,--no-whole-archive
+
+
+OBJS = \
+$(MAIN_DIR)/main.o \
+
+
+$(OBJS): %.o: %.cpp
+	$(CC) $(CFLAGS) -c $< -o $@
+
+raduls: $(OBJS) $(RADULS_DIR)/libraduls.a
+	mkdir -p $(BIN_DIR)
+	$(CC) $(CLINK) -o $(BIN_DIR)/$@ $^
+
+$(RADULS_DIR)/libraduls.a:
+	cd $(RADULS_DIR) && $(MAKE)
+
+clean:	
+	rm $(MAIN_DIR)/*.o
+	rm -rf bin
+	cd $(RADULS_DIR) && $(MAKE) clean
+
+all: raduls

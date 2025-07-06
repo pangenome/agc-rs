@@ -30,16 +30,26 @@ let sequence = agc.get_contig_sequence("sample1", "chr1", 100, 200)?;
 
 ## Building
 
-This crate includes AGC as a git submodule and will build it automatically. Just run:
+This crate includes vendored AGC source code and will build it automatically. Just run:
 
 ```bash
 cargo build
 ```
 
 The build process will:
-1. Initialize the AGC submodule if needed
+1. Use the vendored AGC source in the `agc/` directory
 2. Build the AGC library if not already built
 3. Link against the built library
+
+### Updating AGC source
+
+To update the vendored AGC source code from upstream:
+
+```bash
+./vendor-agc.sh
+```
+
+This will download the latest AGC v3.2.1 release and all its dependencies.
 
 ### Alternative build methods
 

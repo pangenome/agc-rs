@@ -1,3 +1,14 @@
 /target
 Cargo.lock
 **/*.rs.bk
+
+# AGC build artifacts
+agc/bin/
+agc/obj/
+agc/prebuild/
+agc/3rd_party/*/build/
+agc/3rd_party/*/build-*/
+agc/3rd_party/**/*.o
+agc/3rd_party/**/*.a
+agc/3rd_party/**/*.so
+agc/3rd_party/**/*.so.*

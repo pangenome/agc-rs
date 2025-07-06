@@ -1,0 +1,36 @@
+CXX	= g++-10
+
+CFLAGS = -DNDEBUG -Wall -O3 -fno-ipa-ra -fno-tree-vrp -fno-tree-pre -m64 -std=c++14 -pthread 
+#CFLAGS = -Wall -O3 -static -fno-ipa-ra -fno-tree-vrp -fno-tree-pre -m64 -std=c++14 -Wl,--whole-archive -lpthread -Wl,--no-whole-archive
+
+KEY_SIZE_EQ_REC_SIZE ?= false
+ifeq ($(KEY_SIZE_EQ_REC_SIZE), true)
+	CFLAGS += -DDISPATCH_ONLY_REC_SIZE
+endif
+	
+libraduls.a: sorting_network.o raduls_impl.o raduls_AVX.o raduls_AVX2.o raduls_SSE2.o exceptions.o
+	ar rcs $@ $^
+
+excetions.o: exceptions.cpp
+	$(CXX) $(CFLAGS) -c $< -o $@
+
+sorting_network.o: sorting_network.cpp
+	$(CXX) -O1 -m64 -std=c++14 -lpthread -c $< -o $@
+
+raduls_impl.o: raduls_impl.cpp
+	$(CXX) $(CFLAGS) -c $< -o $@
+
+raduls_AVX.o: raduls_AVX.cpp
+	$(CXX) -mavx $(CFLAGS) -c $< -o $@
+
+raduls_AVX2.o: raduls_AVX2.cpp
+	$(CXX) -mavx2 $(CFLAGS) -c $< -o $@
+
+raduls_SSE2.o: raduls_SSE2.cpp
+	$(CXX) -msse2 $(CFLAGS) -c $< -o $@
+	
+clean:
+	rm *.o
+	rm libraduls.a
+	
+
