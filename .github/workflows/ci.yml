@@ -39,11 +39,13 @@ jobs:
       if: matrix.os == 'macos-latest'
       run: |
         brew install cmake zlib gcc@11 make
-        # Set up environment to use g++-11 and specify generic ARM platform
+        # Set up environment to use g++-11 for both compiling and linking
         echo "CXX=g++-11" >> $GITHUB_ENV
         echo "CC=gcc-11" >> $GITHUB_ENV
         echo "PLATFORM=arm8" >> $GITHUB_ENV
-        # Add g++ library path for linking
+        # Tell Rust to use g++ as the linker
+        echo "RUSTFLAGS=-C linker=g++-11" >> $GITHUB_ENV
+        # Add g++ library paths
         echo "LIBRARY_PATH=/opt/homebrew/opt/gcc@11/lib/gcc/11:$LIBRARY_PATH" >> $GITHUB_ENV
         echo "LD_LIBRARY_PATH=/opt/homebrew/opt/gcc@11/lib/gcc/11:$LD_LIBRARY_PATH" >> $GITHUB_ENV
     
