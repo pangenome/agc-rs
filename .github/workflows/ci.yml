@@ -38,8 +38,20 @@ jobs:
     - name: Install dependencies (macOS)
       if: matrix.os == 'macos-latest'
       run: |
-        brew install cmake zlib
+        brew install cmake zlib gcc@11 make zstd
+        # Set up environment to use g++-11 for both compiling and linking
+        echo "CXX=g++-11" >> $GITHUB_ENV
+        echo "CC=gcc-11" >> $GITHUB_ENV
+        echo "PLATFORM=arm8" >> $GITHUB_ENV
+        # Tell Rust to use g++ as the linker with proper flags
+        echo "RUSTFLAGS=-C linker=g++-11 -C link-arg=-L/opt/homebrew/opt/gcc@11/lib/gcc/11" >> $GITHUB_ENV
+        # Add g++ library paths
+        echo "LIBRARY_PATH=/opt/homebrew/opt/gcc@11/lib/gcc/11:$LIBRARY_PATH" >> $GITHUB_ENV
+        echo "LD_LIBRARY_PATH=/opt/homebrew/opt/gcc@11/lib/gcc/11:$LD_LIBRARY_PATH" >> $GITHUB_ENV
     
+    - name: Set DYLD_LIBRARY_PATH for Homebrew libraries
+      run: echo "DYLD_LIBRARY_PATH=/usr/local/lib:/opt/homebrew/lib:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
+
     - name: Build
       run: cargo build --verbose
     
