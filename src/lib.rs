@@ -94,8 +94,7 @@ impl AGCFile {
         let length = self.get_contig_length(sample_name, contig_name);
         if length <= 0 {
             return Err(format!(
-                "Contig {}@{} not found or has zero length",
-                contig_name, sample_name
+                "Contig {contig_name}@{sample_name} not found or has zero length"
             ));
         }
         self.get_contig_sequence(sample_name, contig_name, 0, (length - 1) as i32)
