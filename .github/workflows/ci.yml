@@ -43,6 +43,9 @@ jobs:
         echo "CXX=g++-11" >> $GITHUB_ENV
         echo "CC=gcc-11" >> $GITHUB_ENV
         echo "PLATFORM=arm8" >> $GITHUB_ENV
+        # Add g++ library path for linking
+        echo "LIBRARY_PATH=/opt/homebrew/opt/gcc@11/lib/gcc/11:$LIBRARY_PATH" >> $GITHUB_ENV
+        echo "LD_LIBRARY_PATH=/opt/homebrew/opt/gcc@11/lib/gcc/11:$LD_LIBRARY_PATH" >> $GITHUB_ENV
     
     - name: Build
       run: cargo build --verbose
