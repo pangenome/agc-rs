@@ -88,10 +88,8 @@ fn main() {
     // Link pthread (required by AGC)
     println!("cargo:rustc-link-lib=pthread");
 
-    // On macOS with ARM64, we need libatomic for atomic operations
+    // On macOS with ARM64, we need GCC runtime libraries
     if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
-        println!("cargo:rustc-link-lib=atomic");
-
         // Add g++ library search path
         if let Ok(gcc_path) = std::process::Command::new("brew")
             .args(["--prefix", "gcc@11"])
@@ -99,9 +97,13 @@ fn main() {
         {
             if gcc_path.status.success() {
                 let prefix = String::from_utf8_lossy(&gcc_path.stdout).trim().to_string();
-                println!("cargo:rustc-link-search=native={}/lib/gcc/11", prefix);
+                println!("cargo:rustc-link-search=native={prefix}/lib/gcc/11");
             }
         }
+
+        // Link GCC runtime libraries
+        println!("cargo:rustc-link-lib=gcc_s.1");
+        println!("cargo:rustc-link-lib=gcc");
     }
 
     // Rebuild if the bridge changes
