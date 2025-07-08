@@ -27,8 +27,20 @@ fn main() {
                 );
             }
 
+            // Determine which make command to use
+            let make_cmd = if cfg!(target_os = "macos") {
+                // Try gmake first, fall back to make
+                if Command::new("gmake").arg("--version").output().is_ok() {
+                    "gmake"
+                } else {
+                    "make"
+                }
+            } else {
+                "make"
+            };
+
             // Build AGC
-            let status = Command::new("make")
+            let status = Command::new(make_cmd)
                 .current_dir(&vendored_path)
                 .args(["-j"])
                 .status()
