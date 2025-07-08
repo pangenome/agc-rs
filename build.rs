@@ -29,15 +29,31 @@ fn main() {
 
             // Determine which make command to use
             let make_cmd = if cfg!(target_os = "macos") {
-                // Try gmake first, fall back to make
+                // On macOS, we need GNU make. Try gmake first (from brew install make)
                 if Command::new("gmake").arg("--version").output().is_ok() {
                     "gmake"
-                } else {
+                } else if Command::new("make")
+                    .arg("--version")
+                    .output()
+                    .map(|output| {
+                        let stdout = String::from_utf8_lossy(&output.stdout);
+                        stdout.contains("GNU Make")
+                    })
+                    .unwrap_or(false)
+                {
+                    // Check if 'make' is actually GNU make
                     "make"
+                } else {
+                    panic!(
+                        "GNU make is required to build AGC on macOS. \
+                        Please install it with: brew install make"
+                    );
                 }
             } else {
                 "make"
             };
+
+            println!("cargo:warning=Using make command: {}", make_cmd);
 
             // Build AGC
             let status = Command::new(make_cmd)
