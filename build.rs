@@ -30,7 +30,7 @@ fn main() {
             // Build AGC
             let status = Command::new("make")
                 .current_dir(&vendored_path)
-                .args(&["-j"])
+                .args(["-j"])
                 .status()
                 .expect("Failed to build AGC");
 
@@ -46,10 +46,10 @@ fn main() {
     cxx_build::bridge("src/lib.rs")
         .file("src/agc_bridge.cpp")
         .include(&agc_src) // Add AGC root for relative includes
-        .include(&agc_src.join("src"))
-        .include(&agc_src.join("src/common"))
-        .include(&agc_src.join("src/core"))
-        .include(&agc_src.join("3rd_party")) // Add 3rd_party for zstd includes
+        .include(agc_src.join("src"))
+        .include(agc_src.join("src/common"))
+        .include(agc_src.join("src/core"))
+        .include(agc_src.join("3rd_party")) // Add 3rd_party for zstd includes
         .flag_if_supported("-std=c++20")
         .compile("agc-bridge");
 
