@@ -38,7 +38,7 @@ jobs:
     - name: Install dependencies (macOS)
       if: matrix.os == 'macos-latest'
       run: |
-        brew install cmake zlib gcc@11 make
+        brew install cmake zlib gcc@11 make zstd
         # Set up environment to use g++-11 for both compiling and linking
         echo "CXX=g++-11" >> $GITHUB_ENV
         echo "CC=gcc-11" >> $GITHUB_ENV
