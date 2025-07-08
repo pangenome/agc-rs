@@ -39,9 +39,10 @@ jobs:
       if: matrix.os == 'macos-latest'
       run: |
         brew install cmake zlib gcc@11 make
-        # Set up environment to use g++-11
+        # Set up environment to use g++-11 and specify generic ARM platform
         echo "CXX=g++-11" >> $GITHUB_ENV
         echo "CC=gcc-11" >> $GITHUB_ENV
+        echo "PLATFORM=arm8" >> $GITHUB_ENV
     
     - name: Build
       run: cargo build --verbose
