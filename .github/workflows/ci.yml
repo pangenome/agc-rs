@@ -39,9 +39,14 @@ jobs:
       if: matrix.os == 'macos-latest'
       run: |
         brew install cmake zlib
+        brew install make  # Installs GNU make as 'gmake'
     
     - name: Build
-      run: cargo build --verbose
+      run: |
+        if [[ "$RUNNER_OS" == "macOS" ]]; then
+          export PATH="/usr/local/opt/make/libexec/gnubin:$PATH"
+        fi
+        cargo build --verbose
     
     - name: Run tests
       run: cargo test --verbose
