@@ -44,7 +44,9 @@ jobs:
     - name: Build
       run: |
         if [[ "$RUNNER_OS" == "macOS" ]]; then
-          export PATH="/usr/local/opt/make/libexec/gnubin:$PATH"
+          # Ensure gmake is available
+          which gmake || echo "gmake not found"
+          gmake --version || echo "gmake version check failed"
         fi
         cargo build --verbose
     
