@@ -43,8 +43,8 @@ jobs:
         echo "CXX=g++-11" >> $GITHUB_ENV
         echo "CC=gcc-11" >> $GITHUB_ENV
         echo "PLATFORM=arm8" >> $GITHUB_ENV
-        # Tell Rust to use g++ as the linker
-        echo "RUSTFLAGS=-C linker=g++-11" >> $GITHUB_ENV
+        # Tell Rust to use g++ as the linker with proper flags
+        echo "RUSTFLAGS=-C linker=g++-11 -C link-arg=-L/opt/homebrew/opt/gcc@11/lib/gcc/11" >> $GITHUB_ENV
         # Add g++ library paths
         echo "LIBRARY_PATH=/opt/homebrew/opt/gcc@11/lib/gcc/11:$LIBRARY_PATH" >> $GITHUB_ENV
         echo "LD_LIBRARY_PATH=/opt/homebrew/opt/gcc@11/lib/gcc/11:$LD_LIBRARY_PATH" >> $GITHUB_ENV

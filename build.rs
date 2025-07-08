@@ -94,7 +94,7 @@ fn main() {
 
         // Add g++ library search path
         if let Ok(gcc_path) = std::process::Command::new("brew")
-            .args(&["--prefix", "gcc@11"])
+            .args(["--prefix", "gcc@11"])
             .output()
         {
             if gcc_path.status.success() {
