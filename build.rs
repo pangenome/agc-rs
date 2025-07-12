@@ -40,11 +40,25 @@ fn main() {
             };
 
             // Build AGC
-            let status = Command::new(make_cmd)
-                .current_dir(&vendored_path)
-                .args(["-j"])
-                .status()
-                .expect("Failed to build AGC");
+            let mut cmd = Command::new(make_cmd);
+            cmd.current_dir(&vendored_path).args(["-j"]);
+
+            // Pass through CXX environment variable if set (critical for macOS)
+            if let Ok(cxx) = env::var("CXX") {
+                cmd.env("CXX", cxx);
+            }
+
+            // Pass through CC environment variable if set
+            if let Ok(cc) = env::var("CC") {
+                cmd.env("CC", cc);
+            }
+
+            // Pass through PLATFORM if set (for ARM builds)
+            if let Ok(platform) = env::var("PLATFORM") {
+                cmd.env("PLATFORM", platform);
+            }
+
+            let status = cmd.status().expect("Failed to build AGC");
 
             if !status.success() {
                 panic!("Failed to build AGC library");
@@ -91,10 +105,7 @@ fn main() {
     // On macOS with ARM64, we need GCC runtime libraries
     if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
         // Add g++ library search path
-        if let Ok(gcc_path) = std::process::Command::new("brew")
-            .args(["--prefix", "gcc@11"])
-            .output()
-        {
+        if let Ok(gcc_path) = Command::new("brew").args(["--prefix", "gcc@11"]).output() {
             if gcc_path.status.success() {
                 let prefix = String::from_utf8_lossy(&gcc_path.stdout).trim().to_string();
                 println!("cargo:rustc-link-search=native={prefix}/lib/gcc/11");
@@ -109,4 +120,7 @@ fn main() {
     // Rebuild if the bridge changes
     println!("cargo:rerun-if-changed=src/lib.rs");
     println!("cargo:rerun-if-changed=src/agc_bridge.cpp");
+    println!("cargo:rerun-if-env-changed=CXX");
+    println!("cargo:rerun-if-env-changed=CC");
+    println!("cargo:rerun-if-env-changed=PLATFORM");
 }
