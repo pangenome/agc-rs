@@ -77,6 +77,7 @@ fn main() {
         .include(agc_src.join("src/core"))
         .include(agc_src.join("3rd_party")) // Add 3rd_party for zstd includes
         .flag_if_supported("-std=c++20")
+        .flag_if_supported("-fPIC")
         .compile("agc-bridge");
 
     // Link to AGC libraries
