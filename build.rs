@@ -91,13 +91,18 @@ fn main() {
     #[cfg(target_os = "macos")]
     {
         if let Some((prefix, ver)) = detect_homebrew_gcc() {
+            // Compile the bridge with g++
             bridge.compiler(&format!("g++-{ver}"));
+            
+            // Add library search paths
             println!("cargo:rustc-link-search=native={prefix}/lib/gcc/{ver}");
-            println!("cargo:rustc-link-lib=gcc_s.1");   // runtime unwind lib
+            
+            // Link the runtime libraries
+            println!("cargo:rustc-link-lib=gcc_s.1");
             println!("cargo:rustc-link-lib=atomic");
-            // ❌  Do NOT emit -lgcc – Homebrew GCC does not ship libgcc.dylib/a
-        } else {
-            println!("cargo:warning=Homebrew GCC ≤ 13 not found; falling back to clang");
+            
+            // DO NOT set CARGO_TARGET_*_LINKER or rustc-link-arg=-C linker=g++
+            // Let rustc use the default system linker
         }
     }
 
