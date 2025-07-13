@@ -84,7 +84,9 @@ fn main() {
         .include(agc_root.join("src/core"))
         .include(agc_root.join("3rd_party"))
         .flag_if_supported("-std=c++20")
-        .flag_if_supported("-fPIC");
+        .flag_if_supported("-fPIC")
+        .flag_if_supported("-static-libgcc")
+        .flag_if_supported("-static-libstdc++");
 
     #[cfg(target_os = "macos")]
     {
@@ -92,6 +94,7 @@ fn main() {
             bridge.compiler(&format!("g++-{ver}"));
             println!("cargo:rustc-link-search=native={prefix}/lib/gcc/{ver}");
             println!("cargo:rustc-link-lib=gcc_s.1");   // runtime unwind lib
+            println!("cargo:rustc-link-lib=atomic");
             // ❌  Do NOT emit -lgcc – Homebrew GCC does not ship libgcc.dylib/a
         } else {
             println!("cargo:warning=Homebrew GCC ≤ 13 not found; falling back to clang");
