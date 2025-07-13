@@ -1,0 +1,267 @@
+commit eb4f709898d4638f47f238749ecf9bd9b240a3bb
+Author: AndreaGuarracino <andreaguarracino@outlook.com>
+Date:   Sun Jul 13 18:20:25 2025 +0200
+
+    fix(build): remove unnecessary atomic linking argument and ensure gcc is linked
+
+commit 6232a1aa83c95f33aa9bf5c9b28989ea3351dfd6
+Author: AndreaGuarracino <andreaguarracino@outlook.com>
+Date:   Sun Jul 13 18:17:15 2025 +0200
+
+    fix(build): add flag to disable outline atomics in C++ compilation
+
+commit 0e1f12320a55aec707c84041d40833c5000e1d00
+Author: AndreaGuarracino <andreaguarracino@outlook.com>
+Date:   Sun Jul 13 18:14:43 2025 +0200
+
+    fix(build): add flag to disable outline atomics for C++ compilation
+
+commit 49ac4299ef7927623a8ad6b5f54c14f7133b92cb
+Author: AndreaGuarracino <andreaguarracino@outlook.com>
+Date:   Sun Jul 13 18:14:09 2025 +0200
+
+    fix(build): add CXXFLAGS and CFLAGS for aarch64 to disable outline atomics
+
+commit d4d822a0c790514ee472822d98d467d109d1912f
+Author: AndreaGuarracino <andreaguarracino@outlook.com>
+Date:   Sun Jul 13 18:10:05 2025 +0200
+
+    fix(build): ensure atomic library is linked in the build process
+
+commit 809aa362f8cfe999928c0241b5a2f7cc2684a7b7
+Author: AndreaGuarracino <andreaguarracino@outlook.com>
+Date:   Sun Jul 13 17:32:46 2025 +0200
+
+    fix(build): add atomic library linking for aarch64 and x86_64 targets on macOS
+
+commit 04a722915024b9f179187f7c3f8394d0c46d222d
+Author: AndreaGuarracino <andreaguarracino@outlook.com>
+Date:   Sun Jul 13 17:23:48 2025 +0200
+
+    fix(build): change atomic library linking to use link argument for Homebrew GCC
+
+commit 39ba01c23def67f70c66804148d206ea156c2c08
+Author: AndreaGuarracino <andreaguarracino@outlook.com>
+Date:   Sun Jul 13 16:57:39 2025 +0200
+
+    fix(build): add atomic library linking for Homebrew GCC on macOS
+
+commit bf9a3b61a75593a73e7e59dbceb5023ee435973a
+Author: AndreaGuarracino <andreaguarracino@outlook.com>
+Date:   Sun Jul 13 16:45:23 2025 +0200
+
+    feat(build): add configuration for Homebrew GCC linking on macOS
+
+commit 045dba42acaa93b28f905791ea55cfbe8dada259
+Author: AndreaGuarracino <andreaguarracino@outlook.com>
+Date:   Sun Jul 13 16:16:52 2025 +0200
+
+    fix(ci): add conditional check for macOS dependency installation
+
+commit e4adfdb9f750ab21e39ba97ebd0f30e9129a2b74
+Author: AndreaGuarracino <andreaguarracino@outlook.com>
+Date:   Sun Jul 13 16:14:39 2025 +0200
+
+    fix(build): remove deprecated GCC version from detection list
+
+commit 0e30b1a51efc9b5174b2ad5a951808a9bd181889
+Author: AndreaGuarracino <andreaguarracino@outlook.com>
+Date:   Sun Jul 13 16:12:39 2025 +0200
+
+    Revert "fix(build): remove deprecated GCC version from detection list"
+    
+    This reverts commit 96211d2cff3b0ca212cf164402b372028b90b92c.
+
+commit 96211d2cff3b0ca212cf164402b372028b90b92c
+Author: AndreaGuarracino <andreaguarracino@outlook.com>
+Date:   Sun Jul 13 15:55:54 2025 +0200
+
+    fix(build): remove deprecated GCC version from detection list
+
+commit b6d3684b9d8998aa018e0754244bff2187bfbad1
+Author: AndreaGuarracino <andreaguarracino@outlook.com>
+Date:   Sun Jul 13 15:54:17 2025 +0200
+
+    refactor(build): add Stdio import for process handling
+
+commit 8be43132609e777f9ba5ef30a8a044fae70e1982
+Author: AndreaGuarracino <andreaguarracino@outlook.com>
+Date:   Sun Jul 13 15:44:42 2025 +0200
+
+    refactor(build): remove unused Stdio import from build script
+
+commit aaf0a1d95f43c2672f8a6dfd1d6595a3aa1163ab
+Author: AndreaGuarracino <andreaguarracino@outlook.com>
+Date:   Sun Jul 13 15:44:29 2025 +0200
+
+    style(build): format println! for better readability
+
+commit 4990efdcd836c8365e2bcf67a2c126aafaf683c7
+Author: AndreaGuarracino <andreaguarracino@outlook.com>
+Date:   Sun Jul 13 15:38:36 2025 +0200
+
+    fix(ci): simplify macOS dependency installation and remove unused environment variables
+
+commit 74beca49c354b6eb1a6974ea0ef7b2197d65bc76
+Merge: dd457b7 5b66e7c
+Author: Andrea Guarracino <62253982+AndreaGuarracino@users.noreply.github.com>
+Date:   Sun Jul 13 10:26:17 2025 +0200
+
+    Merge pull request #3 from andynet/main
+    
+    Fixed compilation error
+
+commit 5b66e7c9a963044fce05bb72ca1555b83ee52396
+Author: Andrej Baláž <andrejbalaz001@gmail.com>
+Date:   Sun Jul 13 10:13:00 2025 +0200
+
+    Fixed compilation error
+
+commit dd457b7a057897685a7b1ee5ee7188f633203d9a
+Author: AndreaGuarracino <andreaguarracino@outlook.com>
+Date:   Sat Jul 12 21:45:08 2025 +0200
+
+    Revert "fix(build): pass through CXX, CC, and PLATFORM environment variables for AGC build"
+    
+    This reverts commit 6988b428a9261ead91e4d32c75c38f97245c9c93.
+
+commit 6988b428a9261ead91e4d32c75c38f97245c9c93
+Author: AndreaGuarracino <andreaguarracino@outlook.com>
+Date:   Sat Jul 12 21:36:24 2025 +0200
+
+    fix(build): pass through CXX, CC, and PLATFORM environment variables for AGC build
+
+commit 89cdec2fe6785ac9cd1422edc133116b0e48ac86
+Merge: ad57eaf 6cc0bfb
+Author: Andrea Guarracino <62253982+AndreaGuarracino@users.noreply.github.com>
+Date:   Tue Jul 8 12:18:59 2025 +0200
+
+    Merge pull request #1 from pangenome/tweaks
+    
+    Fix CI on macOS
+
+commit 6cc0bfbc7659ebab5618fe012b89453b7c2f89e8
+Author: AndreaGuarracino <andreaguarracino@outlook.com>
+Date:   Tue Jul 8 12:12:58 2025 +0200
+
+    fix(ci): set DYLD_LIBRARY_PATH for Homebrew libraries in macOS setup
+
+commit 615060d70094b0849a3d889e5a4b2028ad4c29bf
+Author: AndreaGuarracino <andreaguarracino@outlook.com>
+Date:   Tue Jul 8 12:08:09 2025 +0200
+
+    fix(ci): add zstd to macOS dependencies installation
+
+commit 6ee00583ed6bbb1f7ae4ed21ba00ca32695aa6ed
+Author: AndreaGuarracino <andreaguarracino@outlook.com>
+Date:   Tue Jul 8 12:02:37 2025 +0200
+
+    fix(ci): update macOS ARM64 setup to link GCC runtime libraries and remove atomic link
+
+commit 698aa82350fca73bb63010cba13fc47ed2e3ce2a
+Author: AndreaGuarracino <andreaguarracino@outlook.com>
+Date:   Tue Jul 8 11:55:45 2025 +0200
+
+    fix(ci): enhance macOS ARM64 setup with g++ linker flags and library paths
+
+commit cb54a79a5b898d439170380e7469ebfdbfb69af0
+Author: AndreaGuarracino <andreaguarracino@outlook.com>
+Date:   Tue Jul 8 11:52:22 2025 +0200
+
+    fix(ci): add libatomic and g++ library search path for macOS ARM64
+
+commit 8816228d4dd6e0533d71cba429ec094cc98dea34
+Author: AndreaGuarracino <andreaguarracino@outlook.com>
+Date:   Tue Jul 8 11:45:16 2025 +0200
+
+    fix(ci): clarify comments and set Rust linker for macOS environment
+
+commit b65f0d1d34e84d6ca8f7387972312fd24a8c807c
+Author: AndreaGuarracino <andreaguarracino@outlook.com>
+Date:   Tue Jul 8 11:35:35 2025 +0200
+
+    fix(ci): add g++ library path for linking in macOS environment setup
+
+commit a6fdb8267a56c19fb1ae5115a30bc2b116ce7c82
+Author: AndreaGuarracino <andreaguarracino@outlook.com>
+Date:   Tue Jul 8 11:26:37 2025 +0200
+
+    fix(ci): specify generic ARM platform in macOS environment setup
+
+commit 913a9b4a38c5bda5b335a6e56de151348d6e03af
+Author: AndreaGuarracino <andreaguarracino@outlook.com>
+Date:   Tue Jul 8 11:18:52 2025 +0200
+
+    fix(ci): update macOS dependency installation to include gcc and set environment variables for g++
+
+commit 2122178303527a09dc77d8f43aa7bf0301006e3f
+Author: AndreaGuarracino <andreaguarracino@outlook.com>
+Date:   Tue Jul 8 09:42:20 2025 +0200
+
+    fix(build): simplify make command selection for macOS
+
+commit 205e2f2c170c1179aeaa93473234852b3ebe08bb
+Author: AndreaGuarracino <andreaguarracino@outlook.com>
+Date:   Tue Jul 8 09:29:28 2025 +0200
+
+    fix(ci): simplify build step by removing gmake checks for macOS
+
+commit 4608606d7ae80ef221219fb30607864647179dea
+Author: AndreaGuarracino <andreaguarracino@outlook.com>
+Date:   Tue Jul 8 09:24:17 2025 +0200
+
+    fix(build): enforce GNU make requirement on macOS and improve command detection
+
+commit 3eac555da192f5503c97ab32778d5c53b53edfa9
+Author: AndreaGuarracino <andreaguarracino@outlook.com>
+Date:   Tue Jul 8 09:22:07 2025 +0200
+
+    fix(ci): ensure GNU make is available for macOS builds
+
+commit ae83d737e99288e80fe4d32723e45a67680b3288
+Author: AndreaGuarracino <andreaguarracino@outlook.com>
+Date:   Tue Jul 8 09:19:14 2025 +0200
+
+    fix(build): enhance make command selection for macOS compatibility
+
+commit 217fe5ff0b068197c1d56149788a27265d3588d3
+Author: AndreaGuarracino <andreaguarracino@outlook.com>
+Date:   Tue Jul 8 09:15:21 2025 +0200
+
+    fix: simplify error message formatting in get_contig_length
+
+commit 56078332fa4c2a86765a5a7bdea0010f363c3f97
+Author: AndreaGuarracino <andreaguarracino@outlook.com>
+Date:   Tue Jul 8 09:12:23 2025 +0200
+
+    fix(ci): ensure GNU make is used for macOS builds
+
+commit f58862b4b33a9523b37cab57a8d4c8ab81bd03a8
+Author: AndreaGuarracino <andreaguarracino@outlook.com>
+Date:   Tue Jul 8 09:05:38 2025 +0200
+
+    fix(build): correct argument passing for make command
+
+commit 455ede486902211eb056ef5b71176d521dc9b6f9
+Author: AndreaGuarracino <andreaguarracino@outlook.com>
+Date:   Tue Jul 8 09:02:35 2025 +0200
+
+    cargo fmt
+
+commit ad57eaf069ad6665c7c94386691ae704a14536bd
+Author: Erik Garrison <erik.garrison@gmail.com>
+Date:   Sun Jul 6 08:02:34 2025 +0200
+
+    pull in agc for reliable building
+
+commit 0ab5ce2c70f33392b6741a7727a77272f87bfe63
+Author: Erik Garrison <erik.garrison@gmail.com>
+Date:   Sat Jul 5 22:56:56 2025 +0200
+
+    make it independent
+
+commit ae57b5a38565f90f14f76447c41069a45c4fe9a4
+Author: Erik Garrison <erik.garrison@gmail.com>
+Date:   Sat Jul 5 22:47:36 2025 +0200
+
+    agc rust wrapper
