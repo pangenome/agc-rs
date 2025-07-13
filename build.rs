@@ -2,12 +2,12 @@
 //! • Builds the vendored AGC static library (if AGC_DIR is not set).
 //! • Compiles the C++ bridge with the same Homebrew GCC that will be used
 //!   by rustc to link the final crate on macOS.
-//! • Adds the correct search paths and runtime libs.
+//! • Ensures all C++ symbols are resolved before final linking.
 
 use std::{
     env,
     path::PathBuf,
-    process::{Command, Stdio},
+    process::Command,
 };
 
 /// Locate a Homebrew GCC ≤ 13 (AGC rejects 14+) and return `(prefix, version)`.
@@ -98,23 +98,12 @@ fn main() {
                 bridge.flag("-march=armv8-a");
             }
 
-            // CRITICAL: Add rpath for GCC libraries at runtime
-            let gcc_lib_path = format!("{prefix}/lib/gcc/{ver}");
-            println!("cargo:rustc-link-arg=-Wl,-rpath,{gcc_lib_path}");
-            
-            // Add library search paths
-            println!("cargo:rustc-link-search=native={gcc_lib_path}");
-            
-            // Link the runtime libraries with full paths to ensure they're found
-            println!("cargo:rustc-link-lib=dylib=gcc_s.1");
-            println!("cargo:rustc-link-lib=static=atomic");
-            
-            // For the C++ standard library, we need to use the GCC version
-            println!("cargo:rustc-link-search=native={prefix}/lib");
-            
-            // Force static linking of libstdc++ to avoid runtime issues
-            bridge.flag("-static-libstdc++");
+            // Force static linking of ALL runtime libraries
             bridge.flag("-static-libgcc");
+            bridge.flag("-static-libstdc++");
+            
+            // Add GCC's lib path for finding the static libraries
+            bridge.flag(&format!("-L{prefix}/lib/gcc/{ver}"));
         }
     }
 
@@ -128,7 +117,34 @@ fn main() {
     bridge.compile("agc-bridge");
 
     /* ──────────────────────────────────────────────────────────────── */
-    /* 3. Link against AGC & friends                                   */
+    /* 3. Link configuration for macOS                                 */
+    /* ──────────────────────────────────────────────────────────────── */
+    #[cfg(target_os = "macos")]
+    if let Some((prefix, ver)) = detect_homebrew_gcc() {
+        // CRITICAL: We need to provide the GCC runtime libraries BEFORE the system ones
+        // Add GCC lib directory with highest priority
+        println!("cargo:rustc-link-search=native={prefix}/lib/gcc/{ver}");
+        
+        // Link libstdc++ statically by specifying the full path
+        let libstdcxx_path = format!("{prefix}/lib/gcc/{ver}/libstdc++.a");
+        if PathBuf::from(&libstdcxx_path).exists() {
+            // Use whole-archive to ensure all symbols are included
+            println!("cargo:rustc-link-arg=-Wl,-force_load,{libstdcxx_path}");
+        } else {
+            // Fallback to dynamic linking if static lib not found
+            println!("cargo:rustc-link-lib=stdc++");
+        }
+        
+        // Link other GCC runtime libraries
+        println!("cargo:rustc-link-lib=gcc_s.1");
+        println!("cargo:rustc-link-lib=gcc");
+        
+        // IMPORTANT: Do NOT link against system libc++
+        // The cxx crate will try to link it, but we override with our args
+    }
+
+    /* ──────────────────────────────────────────────────────────────── */
+    /* 4. Link against AGC & dependencies                              */
     /* ──────────────────────────────────────────────────────────────── */
     println!("cargo:rustc-link-search=native={}", agc_root.join("bin").display());
     println!("cargo:rustc-link-lib=static=agc");
@@ -139,21 +155,16 @@ fn main() {
     );
     println!("cargo:rustc-link-lib=static=zstd");
     
-    // On macOS, link stdc++ after other libraries to resolve symbols
-    #[cfg(target_os = "macos")]
-    if detect_homebrew_gcc().is_some() {
-        // The static libstdc++ should handle this, but add as fallback
-        println!("cargo:rustc-link-lib=c++");
-    }
-    
-    #[cfg(not(target_os = "macos"))]
-    println!("cargo:rustc-link-lib=stdc++");
-    
+    // Common system libraries
     println!("cargo:rustc-link-lib=z");
     println!("cargo:rustc-link-lib=pthread");
+    
+    // On non-macOS, link libstdc++ normally
+    #[cfg(not(target_os = "macos"))]
+    println!("cargo:rustc-link-lib=stdc++");
 
     /* ──────────────────────────────────────────────────────────────── */
-    /* 4. Re‑run triggers                                              */
+    /* 5. Re‑run triggers                                              */
     /* ──────────────────────────────────────────────────────────────── */
     println!("cargo:rerun-if-env-changed=AGC_DIR");
     println!("cargo:rerun-if-changed=src/lib.rs");
