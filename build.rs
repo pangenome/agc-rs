@@ -44,9 +44,6 @@ fn main() {
         .map(PathBuf::from)
         .unwrap_or_else(|_| manifest_dir.join("agc"));
 
-    // Detect target architecture
-    let target_arch = env::var("CARGO_CFG_TARGET_ARCH").unwrap();
-
     if !agc_root.join("bin/libagc.a").exists() {
         println!("cargo:warning=Building vendored AGC …");
 
@@ -98,7 +95,7 @@ fn main() {
             bridge.compiler(&format!("g++-{ver}"));
             
             // Add ARM-specific flags to match AGC compilation
-            if target_arch == "aarch64" {
+            if cfg!(target_arch = "aarch64") {
                 bridge.flag("-march=armv8-a");
             }
 
