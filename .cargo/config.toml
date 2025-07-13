@@ -1,0 +1,7 @@
+[target.aarch64-apple-darwin]
+linker    = "g++-13"
+rustflags = ["-C", "link-arg=-L/opt/homebrew/opt/gcc@13/lib/gcc/13"]
+
+[target.x86_64-apple-darwin]
+linker    = "g++-13"
+rustflags = ["-C", "link-arg=-L/opt/homebrew/opt/gcc@13/lib/gcc/13"]
