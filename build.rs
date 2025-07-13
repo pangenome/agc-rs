@@ -106,7 +106,10 @@ fn main() {
     /* ------------------------------------------------------------------ */
     /* 3. Link against static AGC + dependencies                           */
     /* ------------------------------------------------------------------ */
-    println!("cargo:rustc-link-search=native={}", agc_root.join("bin").display());
+    println!(
+        "cargo:rustc-link-search=native={}",
+        agc_root.join("bin").display()
+    );
     println!("cargo:rustc-link-lib=static=agc");
 
     println!(
