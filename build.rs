@@ -94,6 +94,11 @@ fn main() {
             // Compile the bridge with g++
             bridge.compiler(&format!("g++-{ver}"));
             
+            // Add ARM-specific flags to match AGC compilation
+            if target_arch == "aarch64" {
+                bridge.flag("-march=armv8-a");
+            }
+
             // Add library search paths
             println!("cargo:rustc-link-search=native={prefix}/lib/gcc/{ver}");
             
