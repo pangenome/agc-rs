@@ -8,7 +8,7 @@ use std::{
 /// Try to locate a Homebrew GCC installation and return (prefix, version).
 #[cfg(target_os = "macos")]
 fn detect_homebrew_gcc() -> Option<(String, String)> {
-    for ver in ["14", "13", "12", "11", "10"] {
+    for ver in ["13", "12", "11", "10"] {
         let formula = format!("gcc@{ver}");
         if Command::new("brew")
             .args(["--prefix", &formula])
