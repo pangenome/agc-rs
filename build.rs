@@ -2,7 +2,7 @@
 use std::{
     env,
     path::PathBuf,
-    process::{Command, Stdio},
+    process::Command,
 };
 
 /// Try to locate a Homebrew GCC installation and return (prefix, version).
