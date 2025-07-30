@@ -76,6 +76,17 @@ fn main() {
     /* ──────────────────────────────────────────────────────────────── */
     /* 2. Configure cxx‑build for bridge                               */
     /* ──────────────────────────────────────────────────────────────── */
+    #[cfg(target_os = "macos")]
+    {
+        // Set environment variables BEFORE creating the bridge
+        if let Some((prefix, ver)) = detect_homebrew_gcc() {
+            env::set_var("CXX", format!("{prefix}/bin/g++-{ver}"));
+            env::set_var("CC", format!("{prefix}/bin/gcc-{ver}"));
+            env::set_var("TARGET_CXX", format!("{prefix}/bin/g++-{ver}"));
+            env::set_var("TARGET_CC", format!("{prefix}/bin/gcc-{ver}"));
+        }
+    }
+
     let mut bridge = cxx_build::bridge("src/lib.rs");
     bridge
         .file("src/agc_bridge.cpp")
@@ -90,34 +101,21 @@ fn main() {
     #[cfg(target_os = "macos")]
     {
         if let Some((prefix, ver)) = detect_homebrew_gcc() {
-            // Add all GCC lib directories
-            println!("cargo:rustc-link-search=native={prefix}/lib/gcc/{ver}");
-            println!("cargo:rustc-link-search=native={prefix}/lib");
+            // Still set the compiler explicitly
+            bridge.compiler(&format!("{prefix}/bin/g++-{ver}"));
             
-            // Force load all necessary static libraries to ensure symbols are available
-            let gcc_lib_path = PathBuf::from(&format!("{prefix}/lib/gcc/{ver}"));
-            
-            // Link libstdc++ 
-            let libstdcxx_path = gcc_lib_path.join("libstdc++.a");
-            if libstdcxx_path.exists() {
-                println!("cargo:rustc-link-arg=-Wl,-force_load,{}", libstdcxx_path.display());
+            // Add ARM-specific flags to match AGC compilation
+            if cfg!(target_arch = "aarch64") {
+                bridge.flag("-march=armv8-a");
             }
+
+            // Force static linking of ALL runtime libraries
+            bridge.flag("-static-libgcc");
+            bridge.flag("-static-libstdc++");
             
-            // CRITICAL: Link libgcc.a which contains the ARM64 runtime support
-            let libgcc_path = gcc_lib_path.join("libgcc.a");
-            if libgcc_path.exists() {
-                println!("cargo:rustc-link-arg=-Wl,-force_load,{}", libgcc_path.display());
-            }
-            
-            // Link libatomic.a for atomic operations
-            let libatomic_path = gcc_lib_path.join("libatomic.a");
-            if libatomic_path.exists() {
-                println!("cargo:rustc-link-arg=-Wl,-force_load,{}", libatomic_path.display());
-            }
-            
-            // Also link the shared libgcc_s for any remaining symbols
-            println!("cargo:rustc-link-lib=dylib=gcc_s.1");
-            }
+            // Add GCC's lib path for finding the static libraries
+            bridge.flag(&format!("-L{prefix}/lib/gcc/{ver}"));
+        }
     }
 
     #[cfg(not(target_os = "macos"))]
@@ -134,42 +132,33 @@ fn main() {
     /* ──────────────────────────────────────────────────────────────── */
     #[cfg(target_os = "macos")]
     if let Some((prefix, ver)) = detect_homebrew_gcc() {
-        // CRITICAL: We need to provide the GCC runtime libraries BEFORE the system ones
-        // Add GCC lib directory with highest priority
+        // Add all GCC lib directories
         println!("cargo:rustc-link-search=native={prefix}/lib/gcc/{ver}");
+        println!("cargo:rustc-link-search=native={prefix}/lib");
         
-        // Link libstdc++ statically by specifying the full path
-        let libstdcxx_path = format!("{prefix}/lib/gcc/{ver}/libstdc++.a");
-        if PathBuf::from(&libstdcxx_path).exists() {
-            // Use whole-archive to ensure all symbols are included
-            println!("cargo:rustc-link-arg=-Wl,-force_load,{libstdcxx_path}");
-        } else {
-            // Fallback to dynamic linking if static lib not found
-            println!("cargo:rustc-link-lib=stdc++");
-        }
-        
-        // Link GCC runtime libraries - check what actually exists
+        // Force load all necessary static libraries to ensure symbols are available
         let gcc_lib_path = PathBuf::from(&format!("{prefix}/lib/gcc/{ver}"));
-
-        // Try to find and link libgcc_s
-        if gcc_lib_path.join("libgcc_s.1.dylib").exists() {
-            println!("cargo:rustc-link-lib=dylib=gcc_s.1");
-        } else if gcc_lib_path.join("libgcc_s.dylib").exists() {
-            println!("cargo:rustc-link-lib=dylib=gcc_s");
-        }
-
-        // For static libgcc, use the .a file if it exists
-        if gcc_lib_path.join("libgcc.a").exists() {
-            let libgcc_path = gcc_lib_path.join("libgcc.a");
-            println!("cargo:rustc-link-arg=-Wl,-force_load,{}", libgcc_path.display());
-        } else if gcc_lib_path.join("libgcc_eh.a").exists() {
-            // On some systems, exception handling is in a separate library
-            let libgcc_eh_path = gcc_lib_path.join("libgcc_eh.a");
-            println!("cargo:rustc-link-arg=-Wl,-force_load,{}", libgcc_eh_path.display());
+        
+        // Link libstdc++ 
+        let libstdcxx_path = gcc_lib_path.join("libstdc++.a");
+        if libstdcxx_path.exists() {
+            println!("cargo:rustc-link-arg=-Wl,-force_load,{}", libstdcxx_path.display());
         }
         
-        // IMPORTANT: Do NOT link against system libc++
-        // The cxx crate will try to link it, but we override with our args
+        // Link libgcc.a which contains the ARM64 runtime support
+        let libgcc_path = gcc_lib_path.join("libgcc.a");
+        if libgcc_path.exists() {
+            println!("cargo:rustc-link-arg=-Wl,-force_load,{}", libgcc_path.display());
+        }
+        
+        // Link libatomic.a for atomic operations
+        let libatomic_path = gcc_lib_path.join("libatomic.a");
+        if libatomic_path.exists() {
+            println!("cargo:rustc-link-arg=-Wl,-force_load,{}", libatomic_path.display());
+        }
+        
+        // Also link the shared libgcc_s for any remaining symbols
+        println!("cargo:rustc-link-lib=dylib=gcc_s.1");
     }
 
     /* ──────────────────────────────────────────────────────────────── */
