@@ -135,9 +135,25 @@ fn main() {
             println!("cargo:rustc-link-lib=stdc++");
         }
         
-        // Link other GCC runtime libraries
-        println!("cargo:rustc-link-lib=gcc_s.1");
-        println!("cargo:rustc-link-lib=gcc");
+        // Link GCC runtime libraries - check what actually exists
+        let gcc_lib_path = PathBuf::from(&format!("{prefix}/lib/gcc/{ver}"));
+
+        // Try to find and link libgcc_s
+        if gcc_lib_path.join("libgcc_s.1.dylib").exists() {
+            println!("cargo:rustc-link-lib=dylib=gcc_s.1");
+        } else if gcc_lib_path.join("libgcc_s.dylib").exists() {
+            println!("cargo:rustc-link-lib=dylib=gcc_s");
+        }
+
+        // For static libgcc, use the .a file if it exists
+        if gcc_lib_path.join("libgcc.a").exists() {
+            let libgcc_path = gcc_lib_path.join("libgcc.a");
+            println!("cargo:rustc-link-arg=-Wl,-force_load,{}", libgcc_path.display());
+        } else if gcc_lib_path.join("libgcc_eh.a").exists() {
+            // On some systems, exception handling is in a separate library
+            let libgcc_eh_path = gcc_lib_path.join("libgcc_eh.a");
+            println!("cargo:rustc-link-arg=-Wl,-force_load,{}", libgcc_eh_path.display());
+        }
         
         // IMPORTANT: Do NOT link against system libc++
         // The cxx crate will try to link it, but we override with our args
