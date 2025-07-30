@@ -145,10 +145,30 @@ fn main() {
             println!("cargo:rustc-link-arg=-Wl,-force_load,{}", libstdcxx_path.display());
         }
         
-        // Link libgcc.a which contains the ARM64 runtime support
-        let libgcc_path = gcc_lib_path.join("libgcc.a");
-        if libgcc_path.exists() {
-            println!("cargo:rustc-link-arg=-Wl,-force_load,{}", libgcc_path.display());
+        // CRITICAL: Try multiple possible locations for libgcc
+        let possible_libgcc_names = ["libgcc.a", "libgcc_eh.a", "libgcc_s.a"];
+        let mut found_libgcc = false;
+        
+        for libname in &possible_libgcc_names {
+            let libpath = gcc_lib_path.join(libname);
+            if libpath.exists() {
+                println!("cargo:warning=Found {}: {}", libname, libpath.display());
+                println!("cargo:rustc-link-arg=-Wl,-force_load,{}", libpath.display());
+                found_libgcc = true;
+            }
+        }
+        
+        // If we didn't find libgcc.a, try looking in the parent directory
+        if !found_libgcc {
+            let parent_path = PathBuf::from(&format!("{prefix}/lib"));
+            for libname in &possible_libgcc_names {
+                let libpath = parent_path.join(libname);
+                if libpath.exists() {
+                    println!("cargo:warning=Found {} in parent: {}", libname, libpath.display());
+                    println!("cargo:rustc-link-arg=-Wl,-force_load,{}", libpath.display());
+                    found_libgcc = true;
+                }
+            }
         }
         
         // Link libatomic.a for atomic operations
@@ -157,8 +177,22 @@ fn main() {
             println!("cargo:rustc-link-arg=-Wl,-force_load,{}", libatomic_path.display());
         }
         
+        // For ARM64, we need to ensure we get the emutls symbols
+        // Try to find and link libemutls.a if it exists
+        let libemutls_path = gcc_lib_path.join("libemutls.a");
+        if libemutls_path.exists() {
+            println!("cargo:warning=Found libemutls.a: {}", libemutls_path.display());
+            println!("cargo:rustc-link-arg=-Wl,-force_load,{}", libemutls_path.display());
+        }
+        
         // Also link the shared libgcc_s for any remaining symbols
         println!("cargo:rustc-link-lib=dylib=gcc_s.1");
+        
+        // If still having issues, try to link against compiler-rt which provides
+        // similar functionality on some systems
+        if cfg!(target_arch = "aarch64") {
+            println!("cargo:rustc-link-lib=dylib=System");
+        }
     }
 
     /* ──────────────────────────────────────────────────────────────── */
@@ -183,7 +217,7 @@ fn main() {
 
     /* ──────────────────────────────────────────────────────────────── */
     /* 5. Re‑run triggers                                              */
-    /* ──────────────────────────────────────────────────────────────── */
+    /* ──────────────────────────────────────────────────────────────────── */
     println!("cargo:rerun-if-env-changed=AGC_DIR");
     println!("cargo:rerun-if-changed=src/lib.rs");
     println!("cargo:rerun-if-changed=src/agc_bridge.cpp");
