@@ -4,21 +4,14 @@
 //!   by rustc to link the final crate on macOS.
 //! • Ensures all C++ symbols are resolved before final linking.
 
-use std::{
-    env,
-    path::PathBuf,
-    process::Command,
-};
+use std::{env, path::PathBuf, process::Command};
 
 /// Locate a Homebrew GCC ≤ 13 (AGC rejects 14+) and return `(prefix, version)`.
 #[cfg(target_os = "macos")]
 fn detect_homebrew_gcc() -> Option<(String, String)> {
     for ver in ["13", "12", "11"] {
         let formula = format!("gcc@{ver}");
-        if let Ok(out) = Command::new("brew")
-            .args(["--prefix", &formula])
-            .output()
-        {
+        if let Ok(out) = Command::new("brew").args(["--prefix", &formula]).output() {
             if out.status.success() {
                 let prefix = String::from_utf8_lossy(&out.stdout).trim().to_owned();
                 if !prefix.is_empty() {
@@ -40,8 +33,8 @@ fn main() {
         .unwrap_or_else(|_| manifest_dir.join("agc"));
 
     // Check if we need to rebuild AGC (always rebuild on CI to ensure static linking)
-    let needs_rebuild = !agc_root.join("bin/libagc.a").exists() 
-        || (cfg!(target_os = "macos") && env::var("CI").is_ok());  // Only force rebuild on macOS CI
+    let needs_rebuild = !agc_root.join("bin/libagc.a").exists()
+        || (cfg!(target_os = "macos") && env::var("CI").is_ok()); // Only force rebuild on macOS CI
 
     if needs_rebuild {
         println!("cargo:warning=Building vendored AGC …");
@@ -79,7 +72,10 @@ fn main() {
                 make.env("PLATFORM", "arm8");
             }
             // Force static linking in AGC build
-            make.env("LDFLAGS", "-static-libgcc -static-libstdc++ -Wl,-search_paths_first");
+            make.env(
+                "LDFLAGS",
+                "-static-libgcc -static-libstdc++ -Wl,-search_paths_first",
+            );
             // Ensure zstd is linked statically
             make.env("ZSTD_STATIC", "1");
             make.env("STATIC_LINK", "true");
@@ -122,7 +118,7 @@ fn main() {
         if let Some((prefix, ver)) = detect_homebrew_gcc() {
             // Still set the compiler explicitly
             bridge.compiler(&format!("{prefix}/bin/g++-{ver}"));
-            
+
             // Add ARM-specific flags to match AGC compilation
             if cfg!(target_arch = "aarch64") {
                 bridge.flag("-march=armv8-a");
@@ -131,7 +127,7 @@ fn main() {
             // Force static linking of ALL runtime libraries
             bridge.flag("-static-libgcc");
             bridge.flag("-static-libstdc++");
-            
+
             // Add GCC's lib path for finding the static libraries
             bridge.flag(&format!("-L{prefix}/lib/gcc/{ver}"));
         }
@@ -152,7 +148,7 @@ fn main() {
     #[cfg(target_os = "macos")]
     if let Some((prefix, ver)) = detect_homebrew_gcc() {
         let gcc_cmd = format!("{prefix}/bin/gcc-{ver}");
-        
+
         // Use GCC to find the exact location of libgcc
         if let Ok(output) = Command::new(&gcc_cmd)
             .arg("-print-libgcc-file-name")
@@ -163,24 +159,30 @@ fn main() {
                 println!("cargo:rustc-link-arg=-Wl,-force_load,{}", libgcc_path);
             }
         }
-        
+
         // Add all GCC lib directories
         println!("cargo:rustc-link-search=native={prefix}/lib/gcc/{ver}");
         println!("cargo:rustc-link-search=native={prefix}/lib");
-        
-        // Link libstdc++ 
+
+        // Link libstdc++
         let gcc_lib_path = PathBuf::from(&format!("{prefix}/lib/gcc/{ver}"));
         let libstdcxx_path = gcc_lib_path.join("libstdc++.a");
         if libstdcxx_path.exists() {
-            println!("cargo:rustc-link-arg=-Wl,-force_load,{}", libstdcxx_path.display());
+            println!(
+                "cargo:rustc-link-arg=-Wl,-force_load,{}",
+                libstdcxx_path.display()
+            );
         }
-        
+
         // Link libatomic.a for atomic operations
         let libatomic_path = gcc_lib_path.join("libatomic.a");
         if libatomic_path.exists() {
-            println!("cargo:rustc-link-arg=-Wl,-force_load,{}", libatomic_path.display());
+            println!(
+                "cargo:rustc-link-arg=-Wl,-force_load,{}",
+                libatomic_path.display()
+            );
         }
-        
+
         // For ARM64 on macOS, link additional runtime support
         if cfg!(target_arch = "aarch64") {
             // Link libgcc_eh for exception handling
@@ -194,7 +196,7 @@ fn main() {
                 }
             }
         }
-        
+
         // Also link the shared libgcc_s for any remaining symbols
         println!("cargo:rustc-link-lib=dylib=gcc_s.1");
     }
@@ -202,31 +204,37 @@ fn main() {
     /* ──────────────────────────────────────────────────────────────── */
     /* 4. Link against AGC & dependencies                              */
     /* ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────── */
-    println!("cargo:rustc-link-search=native={}", agc_root.join("bin").display());
+    println!(
+        "cargo:rustc-link-search=native={}",
+        agc_root.join("bin").display()
+    );
     println!("cargo:rustc-link-lib=static=agc");
 
     // Link zstd statically
     let zstd_lib_path = agc_root.join("3rd_party/zstd/lib");
     println!("cargo:rustc-link-search=native={}", zstd_lib_path.display());
-    
+
     // On macOS, force static zstd
     #[cfg(target_os = "macos")]
     {
         let zstd_static = zstd_lib_path.join("libzstd.a");
         if zstd_static.exists() {
-            println!("cargo:rustc-link-arg=-Wl,-force_load,{}", zstd_static.display());
+            println!(
+                "cargo:rustc-link-arg=-Wl,-force_load,{}",
+                zstd_static.display()
+            );
         } else {
             println!("cargo:rustc-link-lib=static=zstd");
         }
     }
-    
+
     #[cfg(not(target_os = "macos"))]
     println!("cargo:rustc-link-lib=static=zstd");
-    
+
     // Common system libraries
     println!("cargo:rustc-link-lib=z");
     println!("cargo:rustc-link-lib=pthread");
-    
+
     // On non-macOS, link libstdc++ normally
     #[cfg(not(target_os = "macos"))]
     println!("cargo:rustc-link-lib=stdc++");
