@@ -33,7 +33,7 @@ fn detect_homebrew_gcc() -> Option<(String, String)> {
 fn main() {
     /* ──────────────────────────────────────────────────────────────── */
     /* 1. Build / locate AGC                                           */
-    /* ──────────────────────────────────────────────────────────────── */
+    /* ──────────────────────────────────────────────────────────────────── */
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     let agc_root = env::var("AGC_DIR")
         .map(PathBuf::from)
@@ -129,46 +129,56 @@ fn main() {
 
     /* ──────────────────────────────────────────────────────────────── */
     /* 3. Link configuration for macOS                                 */
-    /* ──────────────────────────────────────────────────────────────── */
+    /* ──────────────────────────────────────────────────────────────────── */
     #[cfg(target_os = "macos")]
     if let Some((prefix, ver)) = detect_homebrew_gcc() {
+        let gcc_cmd = format!("{prefix}/bin/gcc-{ver}");
+        
+        // Use GCC to find the exact location of libgcc
+        if let Ok(output) = Command::new(&gcc_cmd)
+            .arg("-print-libgcc-file-name")
+            .output()
+        {
+            let libgcc_path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            println!("cargo:warning=libgcc location: {}", libgcc_path);
+            
+            if PathBuf::from(&libgcc_path).exists() {
+                println!("cargo:rustc-link-arg=-Wl,-force_load,{}", libgcc_path);
+            }
+        }
+        
+        // Find the multilib directory for ARM64
+        if let Ok(output) = Command::new(&gcc_cmd)
+            .args(["-print-multi-directory"])
+            .output()
+        {
+            let multi_dir = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            println!("cargo:warning=GCC multilib directory: {}", multi_dir);
+        }
+        
+        // Find the library search paths
+        if let Ok(output) = Command::new(&gcc_cmd)
+            .args(["-print-search-dirs"])
+            .output()
+        {
+            let search_dirs = String::from_utf8_lossy(&output.stdout);
+            for line in search_dirs.lines() {
+                if line.starts_with("libraries: =") {
+                    let paths = line.strip_prefix("libraries: =").unwrap();
+                    println!("cargo:warning=GCC library search paths: {}", paths);
+                }
+            }
+        }
+        
         // Add all GCC lib directories
         println!("cargo:rustc-link-search=native={prefix}/lib/gcc/{ver}");
         println!("cargo:rustc-link-search=native={prefix}/lib");
         
-        // Force load all necessary static libraries to ensure symbols are available
-        let gcc_lib_path = PathBuf::from(&format!("{prefix}/lib/gcc/{ver}"));
-        
         // Link libstdc++ 
+        let gcc_lib_path = PathBuf::from(&format!("{prefix}/lib/gcc/{ver}"));
         let libstdcxx_path = gcc_lib_path.join("libstdc++.a");
         if libstdcxx_path.exists() {
             println!("cargo:rustc-link-arg=-Wl,-force_load,{}", libstdcxx_path.display());
-        }
-        
-        // CRITICAL: Try multiple possible locations for libgcc
-        let possible_libgcc_names = ["libgcc.a", "libgcc_eh.a", "libgcc_s.a"];
-        let mut found_libgcc = false;
-        
-        for libname in &possible_libgcc_names {
-            let libpath = gcc_lib_path.join(libname);
-            if libpath.exists() {
-                println!("cargo:warning=Found {}: {}", libname, libpath.display());
-                println!("cargo:rustc-link-arg=-Wl,-force_load,{}", libpath.display());
-                found_libgcc = true;
-            }
-        }
-        
-        // If we didn't find libgcc.a, try looking in the parent directory
-        if !found_libgcc {
-            let parent_path = PathBuf::from(&format!("{prefix}/lib"));
-            for libname in &possible_libgcc_names {
-                let libpath = parent_path.join(libname);
-                if libpath.exists() {
-                    println!("cargo:warning=Found {} in parent: {}", libname, libpath.display());
-                    println!("cargo:rustc-link-arg=-Wl,-force_load,{}", libpath.display());
-                    found_libgcc = true;
-                }
-            }
         }
         
         // Link libatomic.a for atomic operations
@@ -177,22 +187,36 @@ fn main() {
             println!("cargo:rustc-link-arg=-Wl,-force_load,{}", libatomic_path.display());
         }
         
-        // For ARM64, we need to ensure we get the emutls symbols
-        // Try to find and link libemutls.a if it exists
-        let libemutls_path = gcc_lib_path.join("libemutls.a");
-        if libemutls_path.exists() {
-            println!("cargo:warning=Found libemutls.a: {}", libemutls_path.display());
-            println!("cargo:rustc-link-arg=-Wl,-force_load,{}", libemutls_path.display());
+        // For ARM64 on macOS, we might need to link additional runtime support
+        // Try to find and link compiler-rt which provides the ARM64 intrinsics
+        if cfg!(target_arch = "aarch64") {
+            // Link against compiler builtins
+            if let Ok(output) = Command::new(&gcc_cmd)
+                .args(["-print-file-name=libgcc_eh.a"])
+                .output()
+            {
+                let libgcc_eh_path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                if PathBuf::from(&libgcc_eh_path).exists() && libgcc_eh_path != "libgcc_eh.a" {
+                    println!("cargo:warning=Found libgcc_eh: {}", libgcc_eh_path);
+                    println!("cargo:rustc-link-arg=-Wl,-force_load,{}", libgcc_eh_path);
+                }
+            }
+            
+            // Also try libgcc_s
+            if let Ok(output) = Command::new(&gcc_cmd)
+                .args(["-print-file-name=libgcc_s.a"])
+                .output()
+            {
+                let libgcc_s_path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                if PathBuf::from(&libgcc_s_path).exists() && libgcc_s_path != "libgcc_s.a" {
+                    println!("cargo:warning=Found libgcc_s: {}", libgcc_s_path);
+                    println!("cargo:rustc-link-arg=-Wl,-force_load,{}", libgcc_s_path);
+                }
+            }
         }
         
         // Also link the shared libgcc_s for any remaining symbols
         println!("cargo:rustc-link-lib=dylib=gcc_s.1");
-        
-        // If still having issues, try to link against compiler-rt which provides
-        // similar functionality on some systems
-        if cfg!(target_arch = "aarch64") {
-            println!("cargo:rustc-link-lib=dylib=System");
-        }
     }
 
     /* ──────────────────────────────────────────────────────────────── */
@@ -217,7 +241,7 @@ fn main() {
 
     /* ──────────────────────────────────────────────────────────────── */
     /* 5. Re‑run triggers                                              */
-    /* ──────────────────────────────────────────────────────────────────── */
+    /* ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────── */
     println!("cargo:rerun-if-env-changed=AGC_DIR");
     println!("cargo:rerun-if-changed=src/lib.rs");
     println!("cargo:rerun-if-changed=src/agc_bridge.cpp");
