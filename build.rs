@@ -90,20 +90,25 @@ fn main() {
     #[cfg(target_os = "macos")]
     {
         if let Some((prefix, ver)) = detect_homebrew_gcc() {
-            // Compile the bridge with g++
-            bridge.compiler(&format!("{prefix}/bin/g++-{ver}"));
+            // Add GCC lib directories
+            println!("cargo:rustc-link-search=native={prefix}/lib/gcc/{ver}");
+            println!("cargo:rustc-link-search=native={prefix}/lib");
             
-            // Add ARM-specific flags to match AGC compilation
-            if cfg!(target_arch = "aarch64") {
-                bridge.flag("-march=armv8-a");
+            // Link libstdc++ statically
+            let libstdcxx_path = format!("{prefix}/lib/gcc/{ver}/libstdc++.a");
+            if PathBuf::from(&libstdcxx_path).exists() {
+                println!("cargo:rustc-link-arg=-Wl,-force_load,{libstdcxx_path}");
+            } else {
+                println!("cargo:rustc-link-lib=stdc++");
             }
-
-            // Force static linking of ALL runtime libraries
-            bridge.flag("-static-libgcc");
-            bridge.flag("-static-libstdc++");
             
-            // Add GCC's lib path for finding the static libraries
-            bridge.flag(&format!("-L{prefix}/lib/gcc/{ver}"));
+            // CRITICAL: Link ARM64 atomic operations library
+            println!("cargo:rustc-link-lib=static=atomic");
+            
+            // Link GCC runtime libraries in the correct order
+            // These provide the ARM64-specific symbols
+            println!("cargo:rustc-link-lib=static=gcc");
+            println!("cargo:rustc-link-lib=dylib=gcc_s.1");
         }
     }
 
