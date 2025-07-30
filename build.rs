@@ -33,7 +33,7 @@ fn detect_homebrew_gcc() -> Option<(String, String)> {
 fn main() {
     /* ──────────────────────────────────────────────────────────────── */
     /* 1. Build / locate AGC                                           */
-    /* ──────────────────────────────────────────────────────────────────── */
+    /* ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────── */
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     let agc_root = env::var("AGC_DIR")
         .map(PathBuf::from)
@@ -64,6 +64,8 @@ fn main() {
             if cfg!(target_arch = "aarch64") {
                 make.env("PLATFORM", "arm8");
             }
+            // Force static linking in AGC build
+            make.env("LDFLAGS", "-static-libgcc -static-libstdc++");
         } else {
             panic!("Homebrew GCC 11-13 is required on macOS. Install with: brew install gcc@13");
         }
@@ -75,7 +77,7 @@ fn main() {
 
     /* ──────────────────────────────────────────────────────────────── */
     /* 2. Configure cxx‑build for bridge                               */
-    /* ──────────────────────────────────────────────────────────────── */
+    /* ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────── */
     #[cfg(target_os = "macos")]
     {
         // Set environment variables BEFORE creating the bridge
@@ -129,7 +131,7 @@ fn main() {
 
     /* ──────────────────────────────────────────────────────────────── */
     /* 3. Link configuration for macOS                                 */
-    /* ──────────────────────────────────────────────────────────────────── */
+    /* ──────────────────────────────────────────────────────────────── */
     #[cfg(target_os = "macos")]
     if let Some((prefix, ver)) = detect_homebrew_gcc() {
         let gcc_cmd = format!("{prefix}/bin/gcc-{ver}");
@@ -140,33 +142,8 @@ fn main() {
             .output()
         {
             let libgcc_path = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            println!("cargo:warning=libgcc location: {}", libgcc_path);
-            
             if PathBuf::from(&libgcc_path).exists() {
                 println!("cargo:rustc-link-arg=-Wl,-force_load,{}", libgcc_path);
-            }
-        }
-        
-        // Find the multilib directory for ARM64
-        if let Ok(output) = Command::new(&gcc_cmd)
-            .args(["-print-multi-directory"])
-            .output()
-        {
-            let multi_dir = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            println!("cargo:warning=GCC multilib directory: {}", multi_dir);
-        }
-        
-        // Find the library search paths
-        if let Ok(output) = Command::new(&gcc_cmd)
-            .args(["-print-search-dirs"])
-            .output()
-        {
-            let search_dirs = String::from_utf8_lossy(&output.stdout);
-            for line in search_dirs.lines() {
-                if line.starts_with("libraries: =") {
-                    let paths = line.strip_prefix("libraries: =").unwrap();
-                    println!("cargo:warning=GCC library search paths: {}", paths);
-                }
             }
         }
         
@@ -187,30 +164,16 @@ fn main() {
             println!("cargo:rustc-link-arg=-Wl,-force_load,{}", libatomic_path.display());
         }
         
-        // For ARM64 on macOS, we might need to link additional runtime support
-        // Try to find and link compiler-rt which provides the ARM64 intrinsics
+        // For ARM64 on macOS, link additional runtime support
         if cfg!(target_arch = "aarch64") {
-            // Link against compiler builtins
+            // Link libgcc_eh for exception handling
             if let Ok(output) = Command::new(&gcc_cmd)
                 .args(["-print-file-name=libgcc_eh.a"])
                 .output()
             {
                 let libgcc_eh_path = String::from_utf8_lossy(&output.stdout).trim().to_string();
                 if PathBuf::from(&libgcc_eh_path).exists() && libgcc_eh_path != "libgcc_eh.a" {
-                    println!("cargo:warning=Found libgcc_eh: {}", libgcc_eh_path);
                     println!("cargo:rustc-link-arg=-Wl,-force_load,{}", libgcc_eh_path);
-                }
-            }
-            
-            // Also try libgcc_s
-            if let Ok(output) = Command::new(&gcc_cmd)
-                .args(["-print-file-name=libgcc_s.a"])
-                .output()
-            {
-                let libgcc_s_path = String::from_utf8_lossy(&output.stdout).trim().to_string();
-                if PathBuf::from(&libgcc_s_path).exists() && libgcc_s_path != "libgcc_s.a" {
-                    println!("cargo:warning=Found libgcc_s: {}", libgcc_s_path);
-                    println!("cargo:rustc-link-arg=-Wl,-force_load,{}", libgcc_s_path);
                 }
             }
         }
@@ -221,15 +184,30 @@ fn main() {
 
     /* ──────────────────────────────────────────────────────────────── */
     /* 4. Link against AGC & dependencies                              */
-    /* ──────────────────────────────────────────────────────────────── */
+    /* ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────── */
     println!("cargo:rustc-link-search=native={}", agc_root.join("bin").display());
     println!("cargo:rustc-link-lib=static=agc");
 
+    // IMPORTANT: Force static linking of zstd to avoid runtime dependency
     println!(
         "cargo:rustc-link-search=native={}",
         agc_root.join("3rd_party/zstd/lib").display()
     );
     println!("cargo:rustc-link-lib=static=zstd");
+    
+    // Also check if there's a system zstd we need to handle
+    #[cfg(target_os = "macos")]
+    {
+        // Add common Homebrew library paths where zstd might be
+        println!("cargo:rustc-link-search=native=/opt/homebrew/lib");
+        println!("cargo:rustc-link-search=native=/usr/local/lib");
+        
+        // If the static library exists in the AGC directory, force load it
+        let zstd_static = agc_root.join("3rd_party/zstd/lib/libzstd.a");
+        if zstd_static.exists() {
+            println!("cargo:rustc-link-arg=-Wl,-force_load,{}", zstd_static.display());
+        }
+    }
     
     // Common system libraries
     println!("cargo:rustc-link-lib=z");
