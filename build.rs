@@ -39,8 +39,21 @@ fn main() {
         .map(PathBuf::from)
         .unwrap_or_else(|_| manifest_dir.join("agc"));
 
-    if !agc_root.join("bin/libagc.a").exists() {
+    // Check if we need to rebuild AGC (always rebuild on CI to ensure static linking)
+    let needs_rebuild = !agc_root.join("bin/libagc.a").exists() 
+        || env::var("CI").is_ok();  // Always rebuild on CI
+
+    if needs_rebuild {
         println!("cargo:warning=Building vendored AGC …");
+
+        // Clean previous build to ensure fresh static linking
+        if agc_root.join("bin").exists() {
+            println!("cargo:warning=Cleaning previous AGC build...");
+            let _ = Command::new("rm")
+                .args(["-rf", "bin", "build-g++"])
+                .current_dir(&agc_root)
+                .status();
+        }
 
         let make_cmd = if cfg!(target_os = "macos") {
             // Check for gmake first
@@ -54,7 +67,9 @@ fn main() {
         };
 
         let mut make = Command::new(make_cmd);
-        make.current_dir(&agc_root).arg("-j");
+        make.current_dir(&agc_root)
+            .arg("-j")
+            .env("STATIC_LINK", "true");  // Force static linking if AGC supports it
 
         #[cfg(target_os = "macos")]
         if let Some((prefix, ver)) = detect_homebrew_gcc() {
@@ -65,13 +80,36 @@ fn main() {
                 make.env("PLATFORM", "arm8");
             }
             // Force static linking in AGC build
-            make.env("LDFLAGS", "-static-libgcc -static-libstdc++");
+            make.env("LDFLAGS", "-static-libgcc -static-libstdc++ -Wl,-search_paths_first");
+            // Ensure zstd is linked statically
+            make.env("ZSTD_STATIC", "1");
         } else {
             panic!("Homebrew GCC 11-13 is required on macOS. Install with: brew install gcc@13");
         }
 
         if !make.status().expect("failed to execute make").success() {
             panic!("AGC build failed");
+        }
+
+        // Verify that the built AGC doesn't depend on dynamic zstd
+        #[cfg(target_os = "macos")]
+        {
+            let agc_lib = agc_root.join("bin/libagc.a");
+            if agc_lib.exists() {
+                if let Ok(output) = Command::new("otool")
+                    .args(["-L", agc_lib.to_str().unwrap()])
+                    .output()
+                {
+                    let deps = String::from_utf8_lossy(&output.stdout);
+                    if deps.contains("libzstd") {
+                        println!("cargo:warning=WARNING: AGC still has dynamic zstd dependency!");
+                        // Try to use install_name_tool to fix it
+                        let _ = Command::new("install_name_tool")
+                            .args(["-change", "/usr/local/lib/libzstd.1.dylib", "@rpath/libzstd.1.dylib", agc_lib.to_str().unwrap()])
+                            .status();
+                    }
+                }
+            }
         }
     }
 
@@ -131,7 +169,7 @@ fn main() {
 
     /* ──────────────────────────────────────────────────────────────── */
     /* 3. Link configuration for macOS                                 */
-    /* ──────────────────────────────────────────────────────────────── */
+    /* ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────── */
     #[cfg(target_os = "macos")]
     if let Some((prefix, ver)) = detect_homebrew_gcc() {
         let gcc_cmd = format!("{prefix}/bin/gcc-{ver}");
@@ -188,25 +226,17 @@ fn main() {
     println!("cargo:rustc-link-search=native={}", agc_root.join("bin").display());
     println!("cargo:rustc-link-lib=static=agc");
 
-    // IMPORTANT: Force static linking of zstd to avoid runtime dependency
-    println!(
-        "cargo:rustc-link-search=native={}",
-        agc_root.join("3rd_party/zstd/lib").display()
-    );
-    println!("cargo:rustc-link-lib=static=zstd");
+    // Link zstd statically
+    let zstd_lib_path = agc_root.join("3rd_party/zstd/lib");
+    println!("cargo:rustc-link-search=native={}", zstd_lib_path.display());
     
-    // Also check if there's a system zstd we need to handle
-    #[cfg(target_os = "macos")]
-    {
-        // Add common Homebrew library paths where zstd might be
-        println!("cargo:rustc-link-search=native=/opt/homebrew/lib");
-        println!("cargo:rustc-link-search=native=/usr/local/lib");
-        
-        // If the static library exists in the AGC directory, force load it
-        let zstd_static = agc_root.join("3rd_party/zstd/lib/libzstd.a");
-        if zstd_static.exists() {
-            println!("cargo:rustc-link-arg=-Wl,-force_load,{}", zstd_static.display());
-        }
+    // Force static zstd by using whole-archive
+    let zstd_static = zstd_lib_path.join("libzstd.a");
+    if zstd_static.exists() {
+        println!("cargo:rustc-link-arg=-Wl,-force_load,{}", zstd_static.display());
+    } else {
+        // Fallback to regular static linking
+        println!("cargo:rustc-link-lib=static=zstd");
     }
     
     // Common system libraries
@@ -221,6 +251,7 @@ fn main() {
     /* 5. Re‑run triggers                                              */
     /* ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────── */
     println!("cargo:rerun-if-env-changed=AGC_DIR");
+    println!("cargo:rerun-if-env-changed=CI");
     println!("cargo:rerun-if-changed=src/lib.rs");
     println!("cargo:rerun-if-changed=src/agc_bridge.cpp");
     println!("cargo:rerun-if-changed=src/agc_bridge.h");
