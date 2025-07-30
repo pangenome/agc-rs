@@ -90,25 +90,29 @@ fn main() {
     #[cfg(target_os = "macos")]
     {
         if let Some((prefix, ver)) = detect_homebrew_gcc() {
-            // Add GCC lib directories
-            println!("cargo:rustc-link-search=native={prefix}/lib/gcc/{ver}");
-            println!("cargo:rustc-link-search=native={prefix}/lib");
+            // Set environment variables that cc-rs will respect
+            // This ensures cxx-build uses GCC instead of clang
+            env::set_var("CXX", format!("{prefix}/bin/g++-{ver}"));
+            env::set_var("CC", format!("{prefix}/bin/gcc-{ver}"));
             
-            // Link libstdc++ statically
-            let libstdcxx_path = format!("{prefix}/lib/gcc/{ver}/libstdc++.a");
-            if PathBuf::from(&libstdcxx_path).exists() {
-                println!("cargo:rustc-link-arg=-Wl,-force_load,{libstdcxx_path}");
-            } else {
-                println!("cargo:rustc-link-lib=stdc++");
+            // Also set these for good measure
+            env::set_var("TARGET_CXX", format!("{prefix}/bin/g++-{ver}"));
+            env::set_var("TARGET_CC", format!("{prefix}/bin/gcc-{ver}"));
+            
+            // Now configure the bridge - it should use GCC from env vars
+            bridge.compiler(&format!("{prefix}/bin/g++-{ver}"));
+            
+            // Add ARM-specific flags to match AGC compilation
+            if cfg!(target_arch = "aarch64") {
+                bridge.flag("-march=armv8-a");
             }
+
+            // Force static linking of ALL runtime libraries
+            bridge.flag("-static-libgcc");
+            bridge.flag("-static-libstdc++");
             
-            // CRITICAL: Link ARM64 atomic operations library
-            println!("cargo:rustc-link-lib=static=atomic");
-            
-            // Link GCC runtime libraries in the correct order
-            // These provide the ARM64-specific symbols
-            println!("cargo:rustc-link-lib=static=gcc");
-            println!("cargo:rustc-link-lib=dylib=gcc_s.1");
+            // Add GCC's lib path for finding the static libraries
+            bridge.flag(&format!("-L{prefix}/lib/gcc/{ver}"));
         }
     }
 
