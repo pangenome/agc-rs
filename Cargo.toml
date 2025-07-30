@@ -7,8 +7,8 @@ description = "Rust bindings for AGC (Assembled Genomes Compressor)"
 license = "MIT"
 
 [dependencies]
-cxx = "1.0"
+cxx = "1.0.161"
 
 [build-dependencies]
-cxx-build = "1.0"
-cmake = "0.1"
+cxx-build = "1.0.161"
+cmake = "0.1.54"
