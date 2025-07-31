@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ '**' ] # Triggers on push to all branches
+    branches: [ main ]
   pull_request:
     branches: [ main ]
 
@@ -15,7 +15,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, macos-arm64]
+        os: [ubuntu-latest, macos-latest]
         rust: [stable]
     
     steps:
